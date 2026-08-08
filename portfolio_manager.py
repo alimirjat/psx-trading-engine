@@ -73,7 +73,7 @@ class PortfolioManager:
         self.positions["positions"].append(position)
         self._save()
 
-        logger.info(f"✅ Bought {shares} shares of {ticker} @ Rs. {entry_price}")
+        logger.info(f" Bought {shares} shares of {ticker} @ Rs. {entry_price}")
         return True
 
     def close_position(self, ticker, exit_price, reason="SIGNAL"):
@@ -103,7 +103,7 @@ class PortfolioManager:
         self.positions["history"].append(trade_record)
         self._save()
 
-        logger.info(f"💰 Sold {ticker} @ Rs. {exit_price} | P&L: Rs. {pnl:.2f} ({pnl_pct:.1f}%) | Reason: {reason}")
+        logger.info(f" Sold {ticker} @ Rs. {exit_price} | P&L: Rs. {pnl:.2f} ({pnl_pct:.1f}%) | Reason: {reason}")
         return trade_record
 
     def update_trailing_stop(self, ticker, current_price, atr=None):
@@ -121,7 +121,7 @@ class PortfolioManager:
                 new_stop = current_price - (atr * 2)
                 if new_stop > pos["stop_loss"]:
                     pos["stop_loss"] = round(new_stop, 2)
-                    logger.info(f"📈 Trailing stop updated for {ticker}: Rs. {pos['stop_loss']}")
+                    logger.info(f" Trailing stop updated for {ticker}: Rs. {pos['stop_loss']}")
                     self._save()
 
     def check_exits(self, ticker, current_price, atr=None):

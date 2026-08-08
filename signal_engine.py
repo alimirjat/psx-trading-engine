@@ -150,13 +150,13 @@ class SignalEngine:
             action = "🟢 BUY"
         elif pct >= self.cfg['HOLD_MIN']:
             signal = "HOLD"
-            action = "⚪ HOLD"
+            action = " HOLD"
         elif pct >= self.cfg['SELL_MIN']:
             signal = "SELL"
-            action = "🔴 SELL"
+            action = " SELL"
         else:
             signal = "STRONG_SELL"
-            action = "🔴 STRONG SELL"
+            action = " STRONG SELL"
 
         # Calculate targets using ATR
         atr = latest.get('ATR', latest['Close'] * 0.02)
@@ -192,10 +192,10 @@ class SignalEngine:
             if news_sentiment < -0.3 or news_recommendation == "AVOID":
                 if "BUY" in signal:
                     signal = "HOLD"
-                    action = "⚪ HOLD (News Risk)"
+                    action = " HOLD (News Risk)"
                 elif signal == "HOLD":
                     signal = "SELL"
-                    action = "🔴 SELL (News Risk)"
+                    action = " SELL (News Risk)"
 
         result = {
             'ticker': ticker,

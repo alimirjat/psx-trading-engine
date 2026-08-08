@@ -44,17 +44,17 @@ class StockScreener:
         if filters.get('sma20_above_sma50') and sma20 and sma50:
             if sma20 > sma50:
                 score += 20
-                reasons.append("✅ SMA20 > SMA50 (Golden alignment)")
+                reasons.append(" SMA20 > SMA50 (Golden alignment)")
             else:
-                reasons.append("❌ SMA20 < SMA50")
+                reasons.append(" SMA20 < SMA50")
 
         # Price above SMA20
         if filters.get('price_above_sma20') and sma20:
             if price > sma20:
                 score += 15
-                reasons.append("✅ Price above SMA20")
+                reasons.append(" Price above SMA20")
             else:
-                reasons.append("❌ Price below SMA20")
+                reasons.append(" Price below SMA20")
 
         # RSI Range
         rsi = latest.get('RSI')
@@ -62,9 +62,9 @@ class StockScreener:
             rsi_min, rsi_max = filters['rsi_range']
             if rsi_min <= rsi <= rsi_max:
                 score += 15
-                reasons.append(f"✅ RSI {rsi:.1f} in range")
+                reasons.append(f" RSI {rsi:.1f} in range")
             else:
-                reasons.append(f"⚠️ RSI {rsi:.1f} out of range")
+                reasons.append(f" RSI {rsi:.1f} out of range")
 
         # MACD Bullish
         if filters.get('macd_bullish'):
@@ -76,33 +76,33 @@ class StockScreener:
             if macd and macd_sig:
                 if macd > macd_sig and macd_hist > 0 and (prev_hist is None or macd_hist > prev_hist):
                     score += 20
-                    reasons.append("✅ MACD bullish crossover")
+                    reasons.append(" MACD bullish crossover")
                 elif macd > macd_sig:
                     score += 10
                     reasons.append("🟡 MACD above signal")
                 else:
-                    reasons.append("❌ MACD bearish")
+                    reasons.append(" MACD bearish")
 
         # 4. SuperTrend
         st_dir = latest.get('SuperTrend_Dir')
         if st_dir == 1:
             score += 15
-            reasons.append("✅ SuperTrend BUY")
+            reasons.append(" SuperTrend BUY")
         elif st_dir == -1:
-            reasons.append("❌ SuperTrend SELL")
+            reasons.append(" SuperTrend SELL")
 
         # 5. ADX - Trend Strength
         adx = latest.get('ADX')
         if adx and adx > 25:
             score += 10
-            reasons.append(f"✅ Strong trend (ADX {adx:.1f})")
+            reasons.append(f" Strong trend (ADX {adx:.1f})")
 
         # 6. Volume Confirmation
         if vol_sma and vol_sma > 0:
             vol_ratio = volume / vol_sma
             if vol_ratio > 1.5:
                 score += 10
-                reasons.append(f"✅ High volume ({vol_ratio:.1f}x avg)")
+                reasons.append(f" High volume ({vol_ratio:.1f}x avg)")
             elif vol_ratio > 1.0:
                 score += 5
                 reasons.append(f"🟡 Above average volume")
@@ -116,7 +116,7 @@ class StockScreener:
                 latest_rs = rs.iloc[-1]
                 if latest_rs > self.cfg['MIN_RS_SCORE']:
                     score += 10
-                    reasons.append(f"✅ Outperforming KSE-100 (RS: {latest_rs:.1f})")
+                    reasons.append(f" Outperforming KSE-100 (RS: {latest_rs:.1f})")
             except:
                 pass
 

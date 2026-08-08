@@ -28,7 +28,7 @@ try:
     TELEGRAM_AVAILABLE = True
 except ImportError:
     TELEGRAM_AVAILABLE = False
-    logger.warning("⚠️ python-telegram-bot not installed!")
+    logger.warning(" python-telegram-bot not installed!")
     logger.warning("   Run: pip install python-telegram-bot==20.7")
     logger.warning("   Telegram alerts disabled until installed.")
 
@@ -47,12 +47,12 @@ class PSXTelegramBot:
         self.bot = Bot(token=self.token) if self.token and TELEGRAM_AVAILABLE else None
 
         if not TELEGRAM_AVAILABLE:
-            logger.warning("⚠️ Telegram library missing. Install: pip install python-telegram-bot==20.7")
+            logger.warning(" Telegram library missing. Install: pip install python-telegram-bot==20.7")
         elif not self.token:
-            logger.warning("⚠️ TELEGRAM_BOT_TOKEN not set. Telegram alerts disabled.")
+            logger.warning(" TELEGRAM_BOT_TOKEN not set. Telegram alerts disabled.")
             logger.warning("   Setup: Message @BotFather on Telegram to create bot.")
         if not self.chat_id:
-            logger.warning("⚠️ TELEGRAM_CHAT_ID not set. Telegram alerts disabled.")
+            logger.warning(" TELEGRAM_CHAT_ID not set. Telegram alerts disabled.")
             logger.warning("   Setup: Message @userinfobot to get your Chat ID.")
 
     async def send_signal_alert(self, signal_data, grok_data=None, news_data=None):
@@ -74,23 +74,23 @@ class PSXTelegramBot:
             return
 
         # Emoji based on action
-        emoji = "🟢" if "BUY" in action else "🔴" if "SELL" in action else "⚪"
+        emoji = "🟢" if "BUY" in action else "" if "SELL" in action else ""
         if "STOP" in action:
-            emoji = "🛑"
+            emoji = ""
         elif "TARGET" in action:
-            emoji = "🎯"
+            emoji = ""
 
         message = f"""
 {emoji} <b>{action}</b>
 
-📊 <b>Stock:</b> {ticker}
-💰 <b>Price:</b> Rs. {price}
-🎯 <b>Target:</b> Rs. {target}
-🛑 <b>Stop Loss:</b> Rs. {stop}
-📈 <b>R/R Ratio:</b> {rr}
-⭐ <b>Confidence:</b> {score}/100
+ <b>Stock:</b> {ticker}
+ <b>Price:</b> Rs. {price}
+ <b>Target:</b> Rs. {target}
+ <b>Stop Loss:</b> Rs. {stop}
+ <b>R/R Ratio:</b> {rr}
+ <b>Confidence:</b> {score}/100
 
-📉 <b>Indicators:</b>
+ <b>Indicators:</b>
 • RSI: {signal_data.get('rsi', 'N/A')}
 • MACD: {signal_data.get('macd_signal', 'N/A')}
 • SuperTrend: {signal_data.get('supertrend', 'N/A')}
@@ -100,7 +100,7 @@ class PSXTelegramBot:
 
         if grok_data:
             message += f"""
-🤖 <b>Grok AI:</b>
+ <b>Grok AI:</b>
 • Trend: {grok_data.get('trend', 'N/A')}
 • Confidence: {grok_data.get('confidence', 'N/A')}/10
 • Risk: {grok_data.get('risk', 'N/A')}
@@ -109,9 +109,9 @@ class PSXTelegramBot:
 
         if news_data:
             sentiment = news_data.get('sentiment', 0)
-            sentiment_emoji = "🟢" if sentiment > 0.3 else "🔴" if sentiment < -0.3 else "⚪"
+            sentiment_emoji = "🟢" if sentiment > 0.3 else "" if sentiment < -0.3 else ""
             message += f"""
-📰 <b>News Check:</b>
+ <b>News Check:</b>
 • Sentiment: {sentiment_emoji} {sentiment:.2f}
 • Summary: {news_data.get('summary', 'N/A')}
 • Risk Flags: {', '.join(news_data.get('risk_flags', [])) or 'None'}
@@ -125,9 +125,9 @@ class PSXTelegramBot:
                 text=message,
                 parse_mode=ParseMode.HTML
             )
-            logger.info(f"✅ Telegram: {ticker} {action}")
+            logger.info(f" Telegram: {ticker} {action}")
         except Exception as e:
-            logger.error(f"❌ Telegram failed: {e}")
+            logger.error(f" Telegram failed: {e}")
 
     async def send_portfolio_alert(self, trade_record):
         """Send portfolio P&L alert"""
@@ -136,17 +136,17 @@ class PSXTelegramBot:
 
         pnl = trade_record.get('pnl', 0)
         pnl_pct = trade_record.get('pnl_pct', 0)
-        emoji = "🟢💰" if pnl > 0 else "🔴📉"
+        emoji = "🟢" if pnl > 0 else ""
 
         message = f"""
 {emoji} <b>PORTFOLIO UPDATE</b>
 
-📊 <b>Stock:</b> {trade_record['ticker']}
-💰 <b>Exit Price:</b> Rs. {trade_record['exit_price']}
-📥 <b>Entry Price:</b> Rs. {trade_record['entry_price']}
-💵 <b>P&L:</b> Rs. {pnl:,.2f} ({pnl_pct:+.1f}%)
-📅 <b>Holding:</b> {trade_record.get('holding_days', 0)} days
-📝 <b>Reason:</b> {trade_record['reason']}
+ <b>Stock:</b> {trade_record['ticker']}
+ <b>Exit Price:</b> Rs. {trade_record['exit_price']}
+ <b>Entry Price:</b> Rs. {trade_record['entry_price']}
+ <b>P&L:</b> Rs. {pnl:,.2f} ({pnl_pct:+.1f}%)
+ <b>Holding:</b> {trade_record.get('holding_days', 0)} days
+ <b>Reason:</b> {trade_record['reason']}
 """
 
         try:
@@ -164,17 +164,17 @@ class PSXTelegramBot:
             return
 
         message = f"""
-📅 <b>DAILY MARKET SUMMARY</b>
+ <b>DAILY MARKET SUMMARY</b>
 
 🟢 <b>Buy Signals:</b> {summary_data.get('buy_count', 0)}
-🔴 <b>Sell Signals:</b> {summary_data.get('sell_count', 0)}
-⚪ <b>Hold:</b> {summary_data.get('hold_count', 0)}
+ <b>Sell Signals:</b> {summary_data.get('sell_count', 0)}
+ <b>Hold:</b> {summary_data.get('hold_count', 0)}
 
-📰 <b>Market Sentiment:</b> {summary_data.get('sentiment', 'N/A')}
-⚠️ <b>Risk Level:</b> {summary_data.get('risk_level', 'N/A')}
-📝 <b>Outlook:</b> {summary_data.get('outlook', 'N/A')}
+ <b>Market Sentiment:</b> {summary_data.get('sentiment', 'N/A')}
+ <b>Risk Level:</b> {summary_data.get('risk_level', 'N/A')}
+ <b>Outlook:</b> {summary_data.get('outlook', 'N/A')}
 
-🏆 <b>Top Pick:</b> {summary_data.get('top_pick', 'None')}
+ <b>Top Pick:</b> {summary_data.get('top_pick', 'None')}
 """
 
         try:

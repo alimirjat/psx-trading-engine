@@ -270,7 +270,7 @@ KEY_FACTORS: [comma separated factors affecting market]
 
     def check_before_buy(self, ticker):
         """Complete pre-buy news check. Returns (approved: bool, analysis: dict)"""
-        logger.info(f"📰 Checking news before buying {ticker}...")
+        logger.info(f" Checking news before buying {ticker}...")
 
         articles = self.get_company_news(ticker)
         if not articles:
@@ -285,12 +285,12 @@ KEY_FACTORS: [comma separated factors affecting market]
 
         # Auto-reject conditions
         if sentiment < -0.5 or recommendation == "AVOID":
-            logger.warning(f"🚫 News BLOCKED buy for {ticker}: sentiment={sentiment}, rec={recommendation}")
+            logger.warning(f" News BLOCKED buy for {ticker}: sentiment={sentiment}, rec={recommendation}")
             return False, analysis
 
         if "bankruptcy" in str(risk_flags).lower() or "fraud" in str(risk_flags).lower() or "scam" in str(risk_flags).lower():
-            logger.warning(f"🚫 Critical risk flagged for {ticker}: {risk_flags}")
+            logger.warning(f" Critical risk flagged for {ticker}: {risk_flags}")
             return False, analysis
 
-        logger.info(f"✅ News approved for {ticker}: sentiment={sentiment}")
+        logger.info(f" News approved for {ticker}: sentiment={sentiment}")
         return True, analysis
