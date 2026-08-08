@@ -226,10 +226,10 @@ with tab2:
 with tab3:
     if df is not None:
         try:
-        import plotly.graph_objects as go
-    except ImportError:
-        st.error("plotly not installed. Run: pip install plotly==5.18.0")
-        st.stop()
+            import plotly.graph_objects as go
+        except ImportError:
+            st.error("plotly not installed. Run: pip install plotly==5.18.0")
+            st.stop()
 
         fig = go.Figure(data=[go.Candlestick(
             x=enriched.index,
