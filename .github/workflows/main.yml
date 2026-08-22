@@ -9,191 +9,122 @@ on:
 
 jobs:
   build:
-    name: Build PSX AI APK
     runs-on: ubuntu-22.04
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.10"
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            zip \
+            unzip \
+            openjdk-17-jdk \
+            python3-pip \
+            python3-venv \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            libncurses5-dev \
+            libncursesw5-dev \
+            cmake \
+            libffi-dev \
+            libssl-dev \
+            build-essential
 
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          git \
-          zip \
-          unzip \
-          openjdk-17-jdk \
-          python3-pip \
-          python3-venv \
-          autoconf \
-          automake \
-          libtool \
-          pkg-config \
-          zlib1g-dev \
-          libncurses5-dev \
-          libncursesw5-dev \
-          cmake \
-          libffi-dev \
-          libssl-dev \
-          build-essential
+      - name: Configure Java
+        run: |
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> "$GITHUB_ENV"
+          echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> "$GITHUB_PATH"
 
-    - name: Configure Java 17
-      run: |
-        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> "$GITHUB_ENV"
-        echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> "$GITHUB_PATH"
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install "buildozer==1.5.0"
+          pip install "Cython<3"
 
-    - name: Install Buildozer and Cython
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install "buildozer==1.5.0"
-        pip install "Cython<3"
+      - name: Validate Python
+        run: |
+          python -m compileall -q .
 
-    # --------------------------------------------------
-    # Android SDK
-    # Explicitly install the same SDK/build-tools used
-    # by the working operational application.
-    # --------------------------------------------------
+      - name: Install Android SDK
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 
-    - name: Install Android SDK 33 and Build Tools
-      run: |
-        SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses || true
 
-        echo "Accepting Android SDK licenses..."
-        yes | "$SDKMANAGER" --licenses || true
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2"
 
-        echo "Installing required Android packages..."
-        "$SDKMANAGER" \
-          "platform-tools" \
-          "platforms;android-33" \
-          "build-tools;33.0.2"
+      - name: Verify Android SDK and AIDL
+        run: |
+          echo "Android SDK:"
+          echo "$ANDROID_HOME"
 
-        echo "Checking Android SDK..."
-        ls -la "$ANDROID_HOME/platforms/android-33"
-        ls -la "$ANDROID_HOME/build-tools/33.0.2"
+          echo "Build Tools:"
+          ls -la "$ANDROID_HOME/build-tools/33.0.2"
 
-        echo "Checking AIDL..."
-        test -f "$ANDROID_HOME/build-tools/33.0.2/aidl"
+          echo "Checking AIDL:"
+          test -f "$ANDROID_HOME/build-tools/33.0.2/aidl"
 
-        echo "AIDL version:"
-        "$ANDROID_HOME/build-tools/33.0.2/aidl" --version
+          echo "AIDL:"
+          "$ANDROID_HOME/build-tools/33.0.2/aidl" --version
 
-    - name: Validate Python source
-      run: |
-        python -m compileall -q .
+      - name: Show Build Configuration
+        run: |
+          python --version
+          java -version
+          buildozer version
 
-    - name: Show Build Configuration
-      run: |
-        echo "========================================"
-        echo "Python"
-        python --version
+          echo "Buildozer spec:"
+          cat buildozer.spec
 
-        echo "========================================"
-        echo "Java"
-        java -version
+      - name: Clean Build
+        env:
+          BUILDOZER_WARN_ON_ROOT: "0"
+        run: |
+          rm -rf .buildozer
+          rm -rf bin
 
-        echo "========================================"
-        echo "Buildozer"
-        buildozer version
+      - name: Build APK
+        env:
+          BUILDOZER_WARN_ON_ROOT: "0"
+        run: |
+          buildozer -v android debug
 
-        echo "========================================"
-        echo "Android SDK"
-        echo "$ANDROID_HOME"
-
-        echo "========================================"
-        echo "AIDL"
-        "$ANDROID_HOME/build-tools/33.0.2/aidl" --version
-
-        echo "========================================"
-        echo "Build Tools"
-        ls -la "$ANDROID_HOME/build-tools/33.0.2"
-
-        echo "========================================"
-        echo "Project"
-        ls -la
-
-    - name: Clean previous Buildozer state
-      env:
-        BUILDOZER_WARN_ON_ROOT: "0"
-      run: |
-        rm -rf .buildozer
-        rm -rf bin
-
-    - name: Build Android APK
-      env:
-        BUILDOZER_WARN_ON_ROOT: "0"
-      run: |
-        buildozer -v android debug
-
-    - name: Verify APK
-      run: |
-        echo "Searching for APK..."
-
-        find bin -maxdepth 1 -type f -name "*.apk" -print
-
-        APK_COUNT=$(find bin -maxdepth 1 -type f -name "*.apk" | wc -l)
-
-        if [ "$APK_COUNT" -eq 0 ]; then
-          echo "ERROR: APK was not generated."
-          exit 1
-        fi
-
-        echo "========================================"
-        echo "APK BUILD SUCCESS"
-        echo "========================================"
-
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: PSX-AI-BeastMode-APK
-        path: bin/*.apk
-        if-no-files-found: error
-
-    - name: Upload Build Logs
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: PSX-AI-Build-Logs
-        path: |
-          .buildozer/
-          bin/
-        if-no-files-found: ignore
-      # -------------------------------------------------
-      # 9. Verify APK exists
-      # -------------------------------------------------
       - name: Verify APK
         run: |
-          echo "APK files:"
+          echo "Generated APK files:"
           find bin -maxdepth 1 -type f -name "*.apk" -print
 
           APK_COUNT=$(find bin -maxdepth 1 -type f -name "*.apk" | wc -l)
 
           if [ "$APK_COUNT" -eq 0 ]; then
-            echo "ERROR: No APK was generated."
+            echo "ERROR: APK was not generated."
             exit 1
           fi
 
-          echo "APK successfully generated."
+          echo "APK generated successfully."
 
-      # -------------------------------------------------
-      # 10. Upload APK
-      # -------------------------------------------------
-      - name: Upload APK Artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: PSX-AI-BeastMode-APK
           path: bin/*.apk
           if-no-files-found: error
 
-      # -------------------------------------------------
-      # 11. Upload Buildozer logs if build fails
-      # -------------------------------------------------
       - name: Upload Build Logs
         if: failure()
         uses: actions/upload-artifact@v4
