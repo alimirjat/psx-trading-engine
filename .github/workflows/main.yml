@@ -14,99 +14,156 @@ jobs:
 
     steps:
 
-      # -------------------------------------------------
-      # 1. Checkout
-      # -------------------------------------------------
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      # -------------------------------------------------
-      # 2. Python
-      # -------------------------------------------------
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
 
-      # -------------------------------------------------
-      # 3. Java + Android build dependencies
-      # -------------------------------------------------
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          git \
+          zip \
+          unzip \
+          openjdk-17-jdk \
+          python3-pip \
+          python3-venv \
+          autoconf \
+          automake \
+          libtool \
+          pkg-config \
+          zlib1g-dev \
+          libncurses5-dev \
+          libncursesw5-dev \
+          cmake \
+          libffi-dev \
+          libssl-dev \
+          build-essential
 
-          sudo apt-get install -y \
-            git \
-            zip \
-            unzip \
-            openjdk-17-jdk \
-            python3-pip \
-            python3-venv \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libncurses5-dev \
-            libncursesw5-dev \
-            cmake \
-            libffi-dev \
-            libssl-dev \
-            build-essential
+    - name: Configure Java 17
+      run: |
+        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> "$GITHUB_ENV"
+        echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> "$GITHUB_PATH"
 
-      # -------------------------------------------------
-      # 4. Java configuration
-      # -------------------------------------------------
-      - name: Configure Java 17
-        run: |
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-          echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> $GITHUB_PATH
+    - name: Install Buildozer and Cython
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install "buildozer==1.5.0"
+        pip install "Cython<3"
 
-      # -------------------------------------------------
-      # 5. Python build tools
-      # -------------------------------------------------
-      - name: Install Buildozer and Cython
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install "buildozer==1.5.0"
-          pip install "Cython<3"
+    # --------------------------------------------------
+    # Android SDK
+    # Explicitly install the same SDK/build-tools used
+    # by the working operational application.
+    # --------------------------------------------------
 
-      # -------------------------------------------------
-      # 6. Verify project before Android build
-      # -------------------------------------------------
-      - name: Validate Python source
-        run: |
-          python -m compileall -q .
+    - name: Install Android SDK 33 and Build Tools
+      run: |
+        SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
 
-      # -------------------------------------------------
-      # 7. Show build configuration
-      # -------------------------------------------------
-      - name: Show Build Configuration
-        run: |
-          echo "Python:"
-          python --version
+        echo "Accepting Android SDK licenses..."
+        yes | "$SDKMANAGER" --licenses || true
 
-          echo "Java:"
-          java -version
+        echo "Installing required Android packages..."
+        "$SDKMANAGER" \
+          "platform-tools" \
+          "platforms;android-33" \
+          "build-tools;33.0.2"
 
-          echo "Buildozer:"
-          buildozer version
+        echo "Checking Android SDK..."
+        ls -la "$ANDROID_HOME/platforms/android-33"
+        ls -la "$ANDROID_HOME/build-tools/33.0.2"
 
-          echo "Project files:"
-          ls -la
+        echo "Checking AIDL..."
+        test -f "$ANDROID_HOME/build-tools/33.0.2/aidl"
 
-          echo "Buildozer spec:"
-          sed -n '1,220p' buildozer.spec
+        echo "AIDL version:"
+        "$ANDROID_HOME/build-tools/33.0.2/aidl" --version
 
-      # -------------------------------------------------
-      # 8. Build Android APK
-      # -------------------------------------------------
-      - name: Build Debug APK
-        env:
-          BUILDOZER_WARN_ON_ROOT: "0"
-        run: |
-          buildozer -v android debug
+    - name: Validate Python source
+      run: |
+        python -m compileall -q .
 
+    - name: Show Build Configuration
+      run: |
+        echo "========================================"
+        echo "Python"
+        python --version
+
+        echo "========================================"
+        echo "Java"
+        java -version
+
+        echo "========================================"
+        echo "Buildozer"
+        buildozer version
+
+        echo "========================================"
+        echo "Android SDK"
+        echo "$ANDROID_HOME"
+
+        echo "========================================"
+        echo "AIDL"
+        "$ANDROID_HOME/build-tools/33.0.2/aidl" --version
+
+        echo "========================================"
+        echo "Build Tools"
+        ls -la "$ANDROID_HOME/build-tools/33.0.2"
+
+        echo "========================================"
+        echo "Project"
+        ls -la
+
+    - name: Clean previous Buildozer state
+      env:
+        BUILDOZER_WARN_ON_ROOT: "0"
+      run: |
+        rm -rf .buildozer
+        rm -rf bin
+
+    - name: Build Android APK
+      env:
+        BUILDOZER_WARN_ON_ROOT: "0"
+      run: |
+        buildozer -v android debug
+
+    - name: Verify APK
+      run: |
+        echo "Searching for APK..."
+
+        find bin -maxdepth 1 -type f -name "*.apk" -print
+
+        APK_COUNT=$(find bin -maxdepth 1 -type f -name "*.apk" | wc -l)
+
+        if [ "$APK_COUNT" -eq 0 ]; then
+          echo "ERROR: APK was not generated."
+          exit 1
+        fi
+
+        echo "========================================"
+        echo "APK BUILD SUCCESS"
+        echo "========================================"
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: PSX-AI-BeastMode-APK
+        path: bin/*.apk
+        if-no-files-found: error
+
+    - name: Upload Build Logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: PSX-AI-Build-Logs
+        path: |
+          .buildozer/
+          bin/
+        if-no-files-found: ignore
       # -------------------------------------------------
       # 9. Verify APK exists
       # -------------------------------------------------
