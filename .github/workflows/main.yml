@@ -1,0 +1,148 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build PSX AI APK
+    runs-on: ubuntu-22.04
+
+    steps:
+
+      # -------------------------------------------------
+      # 1. Checkout
+      # -------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -------------------------------------------------
+      # 2. Python
+      # -------------------------------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # -------------------------------------------------
+      # 3. Java + Android build dependencies
+      # -------------------------------------------------
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+
+          sudo apt-get install -y \
+            git \
+            zip \
+            unzip \
+            openjdk-17-jdk \
+            python3-pip \
+            python3-venv \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            libncurses5-dev \
+            libncursesw5-dev \
+            cmake \
+            libffi-dev \
+            libssl-dev \
+            build-essential
+
+      # -------------------------------------------------
+      # 4. Java configuration
+      # -------------------------------------------------
+      - name: Configure Java 17
+        run: |
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> $GITHUB_PATH
+
+      # -------------------------------------------------
+      # 5. Python build tools
+      # -------------------------------------------------
+      - name: Install Buildozer and Cython
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install "buildozer==1.5.0"
+          pip install "Cython<3"
+
+      # -------------------------------------------------
+      # 6. Verify project before Android build
+      # -------------------------------------------------
+      - name: Validate Python source
+        run: |
+          python -m compileall -q .
+
+      # -------------------------------------------------
+      # 7. Show build configuration
+      # -------------------------------------------------
+      - name: Show Build Configuration
+        run: |
+          echo "Python:"
+          python --version
+
+          echo "Java:"
+          java -version
+
+          echo "Buildozer:"
+          buildozer version
+
+          echo "Project files:"
+          ls -la
+
+          echo "Buildozer spec:"
+          sed -n '1,220p' buildozer.spec
+
+      # -------------------------------------------------
+      # 8. Build Android APK
+      # -------------------------------------------------
+      - name: Build Debug APK
+        env:
+          BUILDOZER_WARN_ON_ROOT: "0"
+        run: |
+          buildozer -v android debug
+
+      # -------------------------------------------------
+      # 9. Verify APK exists
+      # -------------------------------------------------
+      - name: Verify APK
+        run: |
+          echo "APK files:"
+          find bin -maxdepth 1 -type f -name "*.apk" -print
+
+          APK_COUNT=$(find bin -maxdepth 1 -type f -name "*.apk" | wc -l)
+
+          if [ "$APK_COUNT" -eq 0 ]; then
+            echo "ERROR: No APK was generated."
+            exit 1
+          fi
+
+          echo "APK successfully generated."
+
+      # -------------------------------------------------
+      # 10. Upload APK
+      # -------------------------------------------------
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSX-AI-BeastMode-APK
+          path: bin/*.apk
+          if-no-files-found: error
+
+      # -------------------------------------------------
+      # 11. Upload Buildozer logs if build fails
+      # -------------------------------------------------
+      - name: Upload Build Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PSX-AI-Build-Logs
+          path: |
+            .buildozer/
+            bin/
+          if-no-files-found: ignore
